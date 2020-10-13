@@ -13,6 +13,7 @@ pip install -r requirements.txt
 
 ## Example
 The implementation comes with three real-world datasets vowel, glass, and pendigits.
+The current implementation assume min-max normalized data.
 
 Run a small example with INSCY, GPU-INSCY, GPU-INSCY*, and GPU-INSCY-memory, on the datasets vowel and glass:
 ```
@@ -20,6 +21,5 @@ python run_example.py
 ```
 Running the script should take around 5 minutes and end out a plot of the average running times.
 The pendigits dataset is not a part of the example since it would take around 8 hours for INSCY to process.
-The current implementation assume min-max normalized data.
 
 ![plot](example.png)
