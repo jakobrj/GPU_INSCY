@@ -13,7 +13,6 @@ pip install -r requirements.txt
 
 ## Example
 The implementation comes with three real-world datasets vowel, glass, and pendigits.
-The current implementation assume min-max normalized data.
 
 Run a small example with INSCY, GPU-INSCY, GPU-INSCY*, and GPU-INSCY-memory, on the datasets vowel and glass:
 ```

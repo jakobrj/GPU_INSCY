@@ -4,28 +4,35 @@
 #include "Node.h"
 #include "SCY_tree.h"
 #include "GPU_SCY_tree.cuh"
+#include "Neighborhood_tree.h"
 #include "../algorithms/Clustering.h"
 #include "../utils/util.cuh"
 
 
+int SCY_tree::get_cell_no(float x_ij, int j) {
 
-int SCY_tree::get_cell_no(float x_ij) {
-    return min(int(x_ij / this->cell_size), this->number_of_cells - 1);
+    float cell_size = (this->maxs[j] - this->mins[j]) / this->number_of_cells;
+
+    return min(int((x_ij - this->mins[j]) / cell_size), this->number_of_cells - 1);
 }
 
-SCY_tree::SCY_tree() {
+SCY_tree::SCY_tree(float *mins, float *maxs, float v) {
     this->root = make_shared<Node>(-1);
     this->is_s_connected = false;
+    this->mins = mins;
+    this->maxs = maxs;
+    this->v = v;
 }
 
-SCY_tree::SCY_tree(at::Tensor X, int *subspace, int number_of_cells, int subspace_size,
-                   int n, float neighborhood_size) {
-    float v = 1.;
+SCY_tree::SCY_tree(at::Tensor X, int *subspace, int number_of_cells, int subspace_size, int n, float neighborhood_size,
+                   float *mins, float *maxs) {
     this->number_of_cells = number_of_cells;
-    this->cell_size = v / this->number_of_cells;
     this->dims = subspace;
     this->number_of_dims = subspace_size;
     this->number_of_restricted_dims = 0;
+
+    this->mins = mins;
+    this->maxs = maxs;
 
     shared_ptr <Node> root(new Node(-1));
     int node_counter = 0;
@@ -38,7 +45,7 @@ SCY_tree::SCY_tree(at::Tensor X, int *subspace, int number_of_cells, int subspac
 
             //computing cell no
             float x_ij = x_i[this->dims[j]];
-            int cell_no = this->get_cell_no(x_ij);
+            int cell_no = this->get_cell_no(x_ij, j);
 
             //update cell
             shared_ptr <Node> child = set_node(node, cell_no, node_counter);
@@ -64,13 +71,13 @@ int *add_restricted_dim(int *restricted_dims, int number_of_restricted_dims, int
 }
 
 SCY_tree *SCY_tree::restrict(int dim_no, int cell_no) {
-    auto *restricted_scy_tree = new SCY_tree();
+    float ra = this->maxs[dim_no] - this->mins[dim_no];
+    auto *restricted_scy_tree = new SCY_tree(this->mins, this->maxs, this->v * ra);
     restricted_scy_tree->number_of_cells = this->number_of_cells;
     restricted_scy_tree->number_of_dims = this->number_of_dims - 1;
     restricted_scy_tree->restricted_dims = add_restricted_dim(this->restricted_dims, this->number_of_restricted_dims,
                                                               dim_no);
     restricted_scy_tree->number_of_restricted_dims = this->number_of_restricted_dims + 1;
-    restricted_scy_tree->cell_size = this->cell_size;
     restricted_scy_tree->dims = new int[restricted_scy_tree->number_of_dims];
     int j = 0;
     for (int i = 0; i < this->number_of_dims; i++) {
@@ -99,8 +106,8 @@ SCY_tree *SCY_tree::restrict(int dim_no, int cell_no) {
 }
 
 vector<int> SCY_tree::get_possible_neighbors(float *p,
-                                                int *subspace, int subspace_size,
-                                                float neighborhood_size) {
+                                             int *subspace, int subspace_size,
+                                             float neighborhood_size) {
     vector<int> list;
     vector <shared_ptr<Node>> nodes;
     int depth = -1;
@@ -122,15 +129,17 @@ shared_ptr <Node> SCY_tree::set_s_connection(shared_ptr <Node> node, int cell_no
 }
 
 void SCY_tree::construct_s_connection(float neighborhood_size, int &node_counter, shared_ptr <Node> node,
-                                         float *x_i, int j, float x_ij, int cell_no) {
+                                      float *x_i, int j, float x_ij, int cell_no) {
+
+    float cell_size = (this->maxs[j] - this->mins[j]) / this->number_of_cells;
+
     if (x_ij >= ((cell_no + 1) * cell_size - neighborhood_size)) {
-        //todo maybe change neighborhood_size to something else
 
         shared_ptr <Node> s_connection = set_s_connection(node, cell_no, node_counter);
         shared_ptr <Node> pre_s_connection = s_connection;
         for (int k = j + 1; k < number_of_dims; k++) {
             float x_ik = x_i[dims[k]];
-            int cell_no_k = get_cell_no(x_ik);
+            int cell_no_k = get_cell_no(x_ik, dims[k]);
             s_connection = set_s_connection(pre_s_connection, cell_no_k, node_counter);
             pre_s_connection = s_connection;
         }
@@ -305,11 +314,11 @@ GPU_SCY_tree *SCY_tree::convert_to_GPU_SCY_tree() {
 
     GPU_SCY_tree *scy_tree_array = new GPU_SCY_tree(number_of_nodes, this->number_of_dims,
                                                     this->number_of_restricted_dims,
-                                                    this->number_of_points, this->number_of_cells);
+                                                    this->number_of_points, this->number_of_cells,
+                                                    this->mins, this->maxs, this->v);
 
     scy_tree_array->h_dims = this->dims;
     scy_tree_array->h_restricted_dims = this->restricted_dims;
-    scy_tree_array->cell_size = this->cell_size;
     scy_tree_array->is_s_connected = this->is_s_connected;
 
     vector <shared_ptr<Node>> next_nodes = vector < shared_ptr < Node >> ();
@@ -400,21 +409,20 @@ void SCY_tree::get_leafs(shared_ptr <Node> &node, vector <shared_ptr<Node>> &lea
     }
 }
 
-bool SCY_tree::pruneRecursionAndRemove2(int min_size, SCY_tree *neighborhood_tree, at::Tensor X,
-                                           float neighborhood_size,
-                                           int *subspace, int subspace_size, float F, int num_obj, int n, int d,
-                                           bool rectangular) {
+bool SCY_tree::pruneRecursionAndRemove2(int min_size, Neighborhood_tree *neighborhood_tree, at::Tensor X,
+                                        float neighborhood_size,
+                                        int *subspace, int subspace_size, float F, int num_obj, int n, int d,
+                                        bool rectangular) {
 
     vector <shared_ptr<Node>> leafs;
     this->get_leafs(this->root, leafs);
 
-    float a = alpha(d, neighborhood_size, n);
+    float a = alpha(d, neighborhood_size, n, this->v);
     float w = omega(d);
 
-
-    float v = 1.;
     float ex = n * c(d) * pow(neighborhood_size, d);
-    ex = ex / pow(v, d);
+    ex = ex / pow(this->v, d);
+
     int pruned_size = 0;
     for (shared_ptr <Node> &leaf: leafs) {
         vector<int> points;
@@ -538,8 +546,8 @@ bool SCY_tree::pruneRedundancy(float r, map <vector<int>, vector<int>, vec_cmp> 
 
 void
 SCY_tree::get_possible_neighbors_from(vector<int> &list, float *p, shared_ptr <Node> node, int depth,
-                                         int subspace_index, int *subspace, int subspace_size,
-                                         float neighborhood_size) {
+                                      int subspace_index, int *subspace, int subspace_size,
+                                      float neighborhood_size) {
 
     if (node->children.empty()) {
         list.insert(list.end(), node->points.begin(), node->points.end());
@@ -550,7 +558,7 @@ SCY_tree::get_possible_neighbors_from(vector<int> &list, float *p, shared_ptr <N
     int center_cell_no = 0;
     bool is_restricted_dim = subspace_index < subspace_size && this->dims[depth] == subspace[subspace_index];
     if (is_restricted_dim) {
-        center_cell_no = this->get_cell_no(p[subspace[subspace_index]]);
+        center_cell_no = this->get_cell_no(p[subspace[subspace_index]], subspace[subspace_index]);
         subspace_index = subspace_index + 1;
     }
 

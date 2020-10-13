@@ -9,18 +9,6 @@ import torch
 import csv
 import matplotlib.pyplot as plt
 
-X = load_vowel()
-
-c = 4
-num_obj = 8
-F = 1.
-r = 1.
-min_size = 0.05
-N_size = 0.01
-n = X.shape[0]
-
-#do one run just to get the GPU started and get better measurements
-GPU_INSCY(X, N_size, F, num_obj, int(n * min_size), r, number_of_cells=c, rectangular=True)
 
 def run(method, X):
     c = 4
@@ -40,14 +28,33 @@ def run(method, X):
     avg = total/3.
     return avg
 
+def runs(method):
+    return [run(method, load_data()) for load_data in (load_glass,load_vowel)]
+
+X = load_vowel()
+
+c = 4
+num_obj = 8
+F = 1.
+r = 1.
+min_size = 0.05
+N_size = 0.01
+n = X.shape[0]
+
+#do one run just to get the GPU started and get more correct measurements
+GPU_INSCY(X, N_size, F, num_obj, int(n * min_size), r, number_of_cells=c, rectangular=True)
+
+
 labels = ["glass", "vowel"]
 ra = np.arange(len(labels))
 fig, ax = plt.subplots(figsize=(8,5))
 width = 0.20
-rects1 = ax.bar(ra-3*width/2, [run(INSCY, load_data()) for load_data in (load_glass,load_vowel)], width=width, label="INSCY")
-rects2 = ax.bar(ra-width/2, [run(GPU_INSCY, load_data()) for load_data in (load_glass,load_vowel)], width=width, label="GPU-INSCY")
-rects3 = ax.bar(ra+width/2, [run(GPU_INSCY_star, load_data()) for load_data in (load_glass,load_vowel)], width=width, label="GPU-INSCY*")
-rects4 = ax.bar(ra+3*width/2, [run(GPU_INSCY_memory, load_data()) for load_data in (load_glass,load_vowel)], width=width, label="GPU-INSCY-memory")
+
+rects1 = ax.bar(ra - 3*width/2, runs(INSCY), width=width, label="INSCY")
+rects2 = ax.bar(ra - width/2, runs(GPU_INSCY), width=width, label="GPU-INSCY")
+rects3 = ax.bar(ra + width/2, runs(GPU_INSCY_star), width=width, label="GPU-INSCY*")
+rects4 = ax.bar(ra + 3*width/2, runs(GPU_INSCY_memory), width=width, label="GPU-INSCY-memory")
+
 ax.set_xticks(ra)
 ax.set_xticklabels(labels)
 

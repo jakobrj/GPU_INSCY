@@ -17,13 +17,14 @@ public:
 
     bool freed_partial = false;
 
+    float v = 1.;
+
     //host variables
     int number_of_cells;
     int number_of_dims;
     int number_of_restricted_dims;
     int number_of_nodes;
     int number_of_points;
-    float cell_size;
     bool is_s_connected;
 
     //device variables
@@ -58,22 +59,25 @@ public:
     int *d_points;
     int *d_points_placement;
 
+    float * mins;
+    float * maxs;
+
     GPU_SCY_tree(TmpMalloc *tmps, int number_of_nodes, int number_of_dims, int number_of_restricted_dims,
-                 int number_of_points, int number_of_cells);
+                 int number_of_points, int number_of_cells, float *mins, float *maxs, float v);
 
     GPU_SCY_tree(int number_of_nodes, int number_of_dims, int number_of_restricted_dims, int number_of_points,
-                 int number_of_cells);
+                 int number_of_cells, float *mins, float *maxs, float v);
 
     ~GPU_SCY_tree();
 
     vector <vector<GPU_SCY_tree *>> restrict_merge(TmpMalloc *tmps, int first_dim_no, int number_of_dims,
-                                                              int number_of_cells);
+                                                   int number_of_cells);
 
     bool pruneRedundancy(float r, map<vector<int>, int *, vec_cmp> result, int n, TmpMalloc *tmps);
 
     bool pruneRecursion(TmpMalloc *tmps, int min_size, float *d_X, int n, int d,
-                                      float neighborhood_size, float F, int num_obj, int *d_neighborhoods,
-                                      int *d_neighborhood_end, bool rectangular);
+                        float neighborhood_size, float F, int num_obj, int *d_neighborhoods,
+                        int *d_neighborhood_end, bool rectangular);
 
     void copy_to_device();
 };

@@ -4,9 +4,11 @@
 #include <set>
 #include <map>
 
-#include "Clustering.h"
-#include "../structures/SCY_tree.h"
 #include "../utils/util.cuh"
+#include "../structures/SCY_tree.h"
+#include "../structures/Neighborhood_tree.h"
+#include "Clustering.h"
+
 
 #define BLOCK_WIDTH 64
 
@@ -28,7 +30,7 @@ float dist(int p_id, int q_id, at::Tensor X, int *subspace, int subspace_size) {
 }
 
 
-vector<int> neighborhood(SCY_tree *neighborhood_tree, int p_id, at::Tensor X,
+vector<int> neighborhood(Neighborhood_tree *neighborhood_tree, int p_id, at::Tensor X,
                          float neighborhood_size, int *subspace, int subspace_size) {
     vector<int> neighbors;
 
@@ -80,8 +82,7 @@ float phi(int point_id, vector<int> neighbors, float neighborhood_size, at::Tens
     return sum;
 }
 
-float alpha(int subspace_size, float neighborhood_size, int n) {
-    float v = 1.;
+float alpha(int subspace_size, float neighborhood_size, int n, float v) {
     float r = 2 * n * pow(neighborhood_size, subspace_size) * c(subspace_size);
     r = r / (pow(v, subspace_size) * (subspace_size + 2));
     return r;
@@ -91,43 +92,42 @@ float omega(int subspace_size) {
     return 2.0 / (subspace_size + 2.0);
 }
 
-float expDen(int subspace_size, float neighborhood_size, int n) {
-    float v = 1.;
+float expDen(int subspace_size, float neighborhood_size, int n, float v) {
     float r = n * c(subspace_size) * pow(neighborhood_size, subspace_size);
     r = r / pow(v, subspace_size);
     return r;
 }
 
 bool dense(int point_id, vector<int> neighbors, float neighborhood_size, at::Tensor X, int *subspace,
-           int subspace_size,
-           float F, int n, int num_obj) {
+           int subspace_size, float F, int n, int num_obj, float v) {
     float p = phi(point_id, neighbors, neighborhood_size, X, subspace, subspace_size);
-    float a = alpha(subspace_size, neighborhood_size, n);
+    float a = alpha(subspace_size, neighborhood_size, n, v);
     float w = omega(subspace_size);
 
     return p >= max(F * a, num_obj * w);
 }
 
 bool dense_rectangular(int point_id, vector<int> neighbors, float neighborhood_size, at::Tensor X, int *subspace,
-                       int subspace_size,
-                       float F, int n, int num_obj) {
-    float a = expDen(subspace_size, neighborhood_size, n);
+                       int subspace_size, float F, int n, int num_obj, float v) {
+    float a = expDen(subspace_size, neighborhood_size, n, v);
 
     return neighbors.size() >= max(F * a, (float) num_obj);
 }
 
 void
-Clustering(SCY_tree *scy_tree, SCY_tree *neighborhood_tree, at::Tensor X, int n, float neighborhood_size, float F,
+Clustering(SCY_tree *scy_tree, Neighborhood_tree *neighborhood_tree, at::Tensor X, int n, float neighborhood_size,
+           float F,
            int num_obj, vector<int> &clustering, int min_size, float r, map <vector<int>, vector<int>, vec_cmp> result,
            bool rectangular) {
 
     int *subspace = scy_tree->restricted_dims;
-    int subspace_size = scy_tree->number_of_restricted_dims;
+    const int subspace_size = scy_tree->number_of_restricted_dims;
 
     int clustered_count = 0;
     int prev_clustered_count = 0;
     int next_cluster_label = max(0, v_max(clustering)) + 1;
     vector<int> points = scy_tree->get_points();
+
 
     int d = X.size(1);
 
@@ -152,8 +152,9 @@ Clustering(SCY_tree *scy_tree, SCY_tree *neighborhood_tree, at::Tensor X, int n,
 
             bool is_dense = rectangular ?
                             dense_rectangular(p_id, neighbors, neighborhood_size, X, subspace, subspace_size, F, n,
-                                              num_obj) :
-                            dense(p_id, neighbors, neighborhood_size, X, subspace, subspace_size, F, n, num_obj);
+                                              num_obj, scy_tree->v) :
+                            dense(p_id, neighbors, neighborhood_size, X, subspace, subspace_size, F, n, num_obj,
+                                  scy_tree->v);
 
             if (is_dense) {
                 clustering[p_id] = label;

@@ -63,22 +63,19 @@ float gamma_prune_gpu(int n) {
 __device__
 float c_prune_gpu(int subspace_size) {
     float r = pow(PI, subspace_size / 2.);
-    //r = r / gamma_gpu(subspace_size / 2. + 1.);
     r = r / gamma_prune_gpu(subspace_size + 2);
     return r;
 }
 
 __device__
-float alpha_prune_gpu(int subspace_size, float neighborhood_size, int n) {
-    float v = 1.;
+float alpha_prune_gpu(int subspace_size, float neighborhood_size, int n, float v) {
     float r = 2 * n * pow(neighborhood_size, subspace_size) * c_prune_gpu(subspace_size);
     r = r / (pow(v, subspace_size) * (subspace_size + 2));
     return r;
 }
 
 __device__
-float expDen_prune_gpu(int subspace_size, float neighborhood_size, int n) {
-    float v = 1.;
+float expDen_prune_gpu(int subspace_size, float neighborhood_size, int n, float v) {
     float r = n * c_prune_gpu(subspace_size) * pow(neighborhood_size, subspace_size);
     r = r / pow(v, subspace_size);
     return r;
@@ -140,9 +137,9 @@ void compute_merge_map(int *d_is_s_connected_full, int *d_merge_map_full, int nu
 
 __global__
 void restrict_merge_dim(int *d_new_parents_full, int *d_parents, int *d_cells, int *d_counts, int *d_dim_start,
-                               int *d_is_included_full, int *d_new_counts_full, int *d_is_s_connected_full,
-                               int *d_dim_i_full, int *d_merge_map_full,
-                               int number_of_dims, int number_of_nodes, int number_of_cells, int number_of_points) {
+                        int *d_is_included_full, int *d_new_counts_full, int *d_is_s_connected_full,
+                        int *d_dim_i_full, int *d_merge_map_full,
+                        int number_of_dims, int number_of_nodes, int number_of_cells, int number_of_points) {
 
     int i = blockIdx.x;
 
@@ -175,9 +172,9 @@ void restrict_merge_dim(int *d_new_parents_full, int *d_parents, int *d_cells, i
 __global__
 void
 restrict_dim_prop_up(int *d_new_parents_full, int *d_children_full, int *d_parents, int *d_counts, int *d_cells,
-                            int *d_dim_start,
-                            int *d_is_included_full, int *d_new_counts_full, int *d_dim_i_full,
-                            int number_of_dims, int number_of_nodes, int number_of_cells, int number_of_points) {
+                     int *d_dim_start,
+                     int *d_is_included_full, int *d_new_counts_full, int *d_dim_i_full,
+                     int number_of_dims, int number_of_nodes, int number_of_cells, int number_of_points) {
 
     int i = blockIdx.x;
     int cell_no = blockIdx.y;
@@ -225,12 +222,12 @@ restrict_dim_prop_up(int *d_new_parents_full, int *d_children_full, int *d_paren
 __global__
 void
 restrict_merge_dim_prop_down_first(int *d_new_parents_full, int *d_children_full, int *d_parents, int *d_counts,
-                                          int *d_cells,
-                                          int *d_dim_start,
-                                          int *d_is_included_full, int *d_new_counts_full, int *d_dim_i_full,
-                                          int *d_merge_map_full,
-                                          int number_of_dims, int number_of_nodes, int number_of_cells,
-                                          int number_of_points) {
+                                   int *d_cells,
+                                   int *d_dim_start,
+                                   int *d_is_included_full, int *d_new_counts_full, int *d_dim_i_full,
+                                   int *d_merge_map_full,
+                                   int number_of_dims, int number_of_nodes, int number_of_cells,
+                                   int number_of_points) {
     int i = blockIdx.x;
     int cell_no = blockIdx.y;
 
@@ -295,11 +292,11 @@ restrict_merge_dim_prop_down_first(int *d_new_parents_full, int *d_children_full
 
 __global__
 void restrict_dim_prop_down(int *d_new_parents_full, int *d_children_full,
-                                   int *d_parents, int *d_counts, int *d_cells,
-                                   int *d_dim_start,
-                                   int *d_is_included_full, int *d_new_counts_full, int *d_dim_i_full,
-                                   int number_of_dims, int number_of_nodes, int number_of_cells,
-                                   int number_of_points) {
+                            int *d_parents, int *d_counts, int *d_cells,
+                            int *d_dim_start,
+                            int *d_is_included_full, int *d_new_counts_full, int *d_dim_i_full,
+                            int number_of_dims, int number_of_nodes, int number_of_cells,
+                            int number_of_points) {
     int i = blockIdx.x;
     int cell_no = blockIdx.y;
 
@@ -330,7 +327,7 @@ void restrict_dim_prop_down(int *d_new_parents_full, int *d_children_full,
                 int new_parent = d_children[new_parent_parent * number_of_cells * 2 +
                                             2 * d_cells[old_parent] + parent_s_connection];
 
-                if (new_parent >= 0) {//if (d_is_included[new_parent]) {
+                if (new_parent >= 0) {
                     d_children[new_parent * number_of_cells * 2 + 2 * d_cells[n_i] + s_connection] = n_i;
                     d_new_parents[n_i] = new_parent;
                 }
@@ -363,8 +360,8 @@ void restrict_dim_prop_down(int *d_new_parents_full, int *d_children_full,
 __global__
 void
 restrict_move(int *d_new_parents, int *d_cells_1, int *d_cells_2, int *d_parents_1, int *d_parents_2,
-                     int *d_new_counts, int *d_counts_2,
-                     int *d_new_indecies, int *d_is_included, int n) {
+              int *d_new_counts, int *d_counts_2,
+              int *d_new_indecies, int *d_is_included, int n) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n && d_is_included[i]) {
         int new_idx = d_new_indecies[i] - 1;
@@ -377,8 +374,8 @@ restrict_move(int *d_new_parents, int *d_cells_1, int *d_cells_2, int *d_parents
 
 __global__
 void restrict_update_dim(int *dim_start_1, int *dims_1, int *dim_start_2, int *dims_2, int *new_indecies,
-                           int *d_dim_i,
-                           int d_2) {
+                         int *d_dim_i,
+                         int d_2) {
     int d_i_start = d_dim_i[0];
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = j + (d_i_start <= j ? 1 : 0);
@@ -405,8 +402,8 @@ restrict_update_restricted_dim(int restrict_dim, int *d_restricted_dims_1, int *
 __global__
 void
 restrict_merge_is_points_included(int *d_new_parents, int *d_points_placement, int *d_cells, int *d_is_included,
-                                         int *d_is_point_included, int *d_dim_i, int *d_merge_map,
-                                         int number_of_dims, int number_of_points, int c_i) {
+                                  int *d_is_point_included, int *d_dim_i, int *d_merge_map,
+                                  int number_of_dims, int number_of_points, int c_i) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     int dim_i = d_dim_i[0];
@@ -430,11 +427,11 @@ restrict_merge_is_points_included(int *d_new_parents, int *d_points_placement, i
 __global__
 void
 move_points(int *d_new_parents, int *d_children,
-                     int *d_parents, int *d_cells, int *d_points_1, int *d_points_placement_1,
-                     int *d_points_2, int *d_points_placement_2,
-                     int *d_point_new_indecies, int *d_new_indecies,
-                     int *d_is_point_included, int *d_dim_i,
-                     int number_of_points, int number_of_dims, int number_of_cells) {
+            int *d_parents, int *d_cells, int *d_points_1, int *d_points_placement_1,
+            int *d_points_2, int *d_points_placement_2,
+            int *d_point_new_indecies, int *d_new_indecies,
+            int *d_is_point_included, int *d_dim_i,
+            int number_of_points, int number_of_dims, int number_of_cells) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     int dim_i = d_dim_i[0];
@@ -465,7 +462,7 @@ void compute_is_weak_dense_prune(int *d_is_dense, int *d_neighborhoods, int *d_n
                                  int *d_points, int number_of_points,
                                  int *subspace, int subspace_size,
                                  float *X, int n, int d, float F, int num_obj,
-                                 float neighborhood_size) {
+                                 float neighborhood_size, float v) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < number_of_points) {
 
@@ -481,7 +478,7 @@ void compute_is_weak_dense_prune(int *d_is_dense, int *d_neighborhoods, int *d_n
                 p += (1. - sq);
             }
         }
-        float a = alpha_prune_gpu(d, neighborhood_size, n);
+        float a = alpha_prune_gpu(d, neighborhood_size, n, v);
         float w = omega_prune_gpu(d);
         d_is_dense[i] = p >= max(F * a, num_obj * w) ? 1 : 0;
     }
@@ -493,14 +490,14 @@ void compute_is_weak_dense_rectangular_prune(int *d_is_dense, int *d_neighborhoo
                                              int *d_points, int number_of_points,
                                              int *subspace, int subspace_size,
                                              float *X, int n, int d, float F, int num_obj,
-                                             float neighborhood_size) {
+                                             float neighborhood_size, float v) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < number_of_points) {
 
         int p_id = d_points[i];
         int offset = p_id > 0 ? d_neighborhood_end[p_id - 1] : 0;
         int neighbor_count = d_neighborhood_end[p_id] - offset;
-        float a = expDen_prune_gpu(d, neighborhood_size, n);
+        float a = expDen_prune_gpu(d, neighborhood_size, n, v);
         d_is_dense[i] = neighbor_count >= max(F * a, (float) num_obj);
     }
 }
@@ -651,7 +648,12 @@ void GPU_SCY_tree::copy_to_device() {
 
 
 GPU_SCY_tree::GPU_SCY_tree(TmpMalloc *tmps, int number_of_nodes, int number_of_dims, int number_of_restricted_dims,
-                           int number_of_points, int number_of_cells) {
+                           int number_of_points, int number_of_cells, float *mins, float *maxs, float v) {
+
+    this->mins = mins;
+    this->maxs = maxs;
+    this->v = v;
+
     this->tmps = tmps;
     this->number_of_nodes = number_of_nodes;
     this->number_of_dims = number_of_dims;
@@ -719,7 +721,12 @@ GPU_SCY_tree::GPU_SCY_tree(TmpMalloc *tmps, int number_of_nodes, int number_of_d
 
 
 GPU_SCY_tree::GPU_SCY_tree(int number_of_nodes, int number_of_dims, int number_of_restricted_dims, int number_of_points,
-                           int number_of_cells) {
+                           int number_of_cells, float *mins, float *maxs, float v) {
+
+    this->mins = mins;
+    this->maxs = maxs;
+    this->v = v;
+
     this->number_of_nodes = number_of_nodes;
     this->number_of_dims = number_of_dims;
     this->number_of_restricted_dims = number_of_restricted_dims;
@@ -977,17 +984,18 @@ GPU_SCY_tree::restrict_merge(TmpMalloc *tmps, int first_dim_no, int number_of_di
                     cudaDeviceSynchronize();
                     gpuErrchk(cudaPeekAtLastError());
 
+                    float ra = this->maxs[dim_no] - this->mins[dim_no];
                     GPU_SCY_tree *restricted_scy_tree = new GPU_SCY_tree(tmps, new_number_of_nodes,
                                                                          scy_tree->number_of_dims - 1,
                                                                          scy_tree->number_of_restricted_dims + 1,
                                                                          new_number_of_points,
-                                                                         scy_tree->number_of_cells);
+                                                                         scy_tree->number_of_cells, mins, maxs,
+                                                                         scy_tree->v * ra);
                     gpuErrchk(cudaPeekAtLastError());
 
                     L[i][cell_no] = restricted_scy_tree;
                     L_merged[i].push_back(restricted_scy_tree);
 
-                    restricted_scy_tree->cell_size = scy_tree->cell_size;
                     restricted_scy_tree->is_s_connected = false;
 
                     cudaDeviceSynchronize();
@@ -1183,9 +1191,9 @@ GPU_SCY_tree::restrict_merge(TmpMalloc *tmps, int first_dim_no, int number_of_di
 
 bool
 GPU_SCY_tree::pruneRecursion(TmpMalloc *tmps, int min_size, float *d_X, int n, int d,
-                                           float neighborhood_size, float F,
-                                           int num_obj, int *d_neighborhoods, int *d_neighborhood_end,
-                                           bool rectangular) {
+                             float neighborhood_size, float F,
+                             int num_obj, int *d_neighborhoods, int *d_neighborhood_end,
+                             bool rectangular) {
 
 
     if (this->number_of_points < min_size) {
@@ -1217,7 +1225,8 @@ GPU_SCY_tree::pruneRecursion(TmpMalloc *tmps, int min_size, float *d_X, int n, i
                                                                                                         this->number_of_restricted_dims,
                                                                                                         d_X, n, d,
                                                                                                         F, num_obj,
-                                                                                                        neighborhood_size);
+                                                                                                        neighborhood_size,
+                                                                                                        this->v);
         cudaDeviceSynchronize();
         gpuErrchk(cudaPeekAtLastError());
     } else {
@@ -1229,7 +1238,7 @@ GPU_SCY_tree::pruneRecursion(TmpMalloc *tmps, int min_size, float *d_X, int n, i
                                                                                             this->number_of_restricted_dims,
                                                                                             d_X, n, d,
                                                                                             F, num_obj,
-                                                                                            neighborhood_size);
+                                                                                            neighborhood_size, this->v);
         cudaDeviceSynchronize();
         gpuErrchk(cudaPeekAtLastError());
     }

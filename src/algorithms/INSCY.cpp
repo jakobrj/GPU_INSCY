@@ -4,11 +4,12 @@
 #include "INSCY.h"
 #include "../algorithms/Clustering.h"
 #include "../structures/SCY_tree.h"
+#include "../structures/Neighborhood_tree.h"
 #include "../utils/util.cuh"
 
 
 void
-INSCY(SCY_tree *scy_tree, SCY_tree *neighborhood_tree, at::Tensor X, int n, float neighborhood_size, float F,
+INSCY(SCY_tree *scy_tree, Neighborhood_tree *neighborhood_tree, at::Tensor X, int n, float neighborhood_size, float F,
       int num_obj, int min_size, map <vector<int>, vector<int>, vec_cmp> &result, int first_dim_no, int d, float r,
       int &calls, bool rectangular) {
 

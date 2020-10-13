@@ -69,16 +69,14 @@ float c_gpu(int subspace_size) {
 }
 
 __device__
-float alpha_gpu(int subspace_size, float neighborhood_size, int n) {
-    float v = 1.;
+float alpha_gpu(int subspace_size, float neighborhood_size, int n, float v) {
     float r = 2 * n * pow(neighborhood_size, subspace_size) * c_gpu(subspace_size);
     r = r / (pow(v, subspace_size) * (subspace_size + 2));
     return r;
 }
 
 __device__
-float expDen_gpu(int subspace_size, float neighborhood_size, int n) {
-    float v = 1.;
+float expDen_gpu(int subspace_size, float neighborhood_size, int n, float v) {
     float r = n * c_gpu(subspace_size) * pow(neighborhood_size, subspace_size);
     r = r / pow(v, subspace_size);
     return r;
@@ -601,7 +599,7 @@ void compute_is_dense_rectangular(bool *d_is_dense_list, int **d_points_list, in
                                            int **d_neighborhoods_list, float neighborhood_size,
                                            int **d_neighborhood_end_list,
                                            float *X, int **subspace_list, int subspace_size, float F, int n,
-                                           int num_obj, int d) {
+                                           int num_obj, int d, float *d_v) {
     int j = blockIdx.y;
 
     int number_of_points = d_number_of_points[j];
@@ -610,6 +608,7 @@ void compute_is_dense_rectangular(bool *d_is_dense_list, int **d_points_list, in
     int *d_neighborhoods = d_neighborhoods_list[j];
     int *d_neighborhood_end = d_neighborhood_end_list[j];
     bool *d_is_dense = &d_is_dense_list[j * n];
+    float v = d_v[j];
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < number_of_points; i += blockDim.x * gridDim.x) {
 
@@ -617,7 +616,7 @@ void compute_is_dense_rectangular(bool *d_is_dense_list, int **d_points_list, in
 
         int offset = p_id > 0 ? d_neighborhood_end[p_id - 1] : 0;
         int neighbor_count = d_neighborhood_end[p_id] - offset;
-        float a = expDen_gpu(subspace_size, neighborhood_size, n);
+        float a = expDen_gpu(subspace_size, neighborhood_size, n, v);
         d_is_dense[p_id] = neighbor_count >= max(F * a, (float) num_obj);
     }
 }
@@ -627,7 +626,7 @@ void compute_is_dense(bool *d_is_dense_list, int **d_points_list, int *d_number_
                                int **d_neighborhoods_list, float neighborhood_size,
                                int **d_neighborhood_end_list,
                                float *X, int **subspace_list, int subspace_size, float F, int n,
-                               int num_obj, int d) {
+                               int num_obj, int d, float *d_v) {
 
     int j = blockIdx.y;
 
@@ -637,6 +636,7 @@ void compute_is_dense(bool *d_is_dense_list, int **d_points_list, int *d_number_
     int *d_neighborhoods = d_neighborhoods_list[j];
     int *d_neighborhood_end = d_neighborhood_end_list[j];
     bool *d_is_dense = &d_is_dense_list[j * n];
+    float v = d_v[j];
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < number_of_points; i += blockDim.x * gridDim.x) {
 
@@ -652,7 +652,7 @@ void compute_is_dense(bool *d_is_dense_list, int **d_points_list, int *d_number_
                 p += (1. - sq);
             }
         }
-        float a = alpha_gpu(subspace_size, neighborhood_size, n);
+        float a = alpha_gpu(subspace_size, neighborhood_size, n, v);
         float w = omega_gpu(subspace_size);
         d_is_dense[p_id] = p >= max(F * a, num_obj * w);
     }
@@ -682,6 +682,7 @@ void GPU_Clustering(vector<int *> new_neighborhoods_list, vector<int *> new_neig
     int *h_points_list[size];
     int *h_restricted_dims_list[size];
     int h_number_of_points[size];
+    float h_v[size];
 
     int number_of_points = 0;
     for (int i = 0; i < size; i++) {
@@ -690,6 +691,7 @@ void GPU_Clustering(vector<int *> new_neighborhoods_list, vector<int *> new_neig
         h_restricted_dims_list[i] = restricted_scy_tree->d_restricted_dims;
         h_number_of_points[i] = restricted_scy_tree->number_of_points;
         number_of_points += restricted_scy_tree->number_of_points;
+        h_v[i] = restricted_scy_tree->v;
     }
     number_of_points /= size;
 
@@ -704,6 +706,10 @@ void GPU_Clustering(vector<int *> new_neighborhoods_list, vector<int *> new_neig
     int *d_number_of_points;
     cudaMalloc(&d_number_of_points, size * sizeof(int));
     cudaMemcpy(d_number_of_points, h_number_of_points, size * sizeof(int), cudaMemcpyHostToDevice);
+
+    float *d_v;
+    cudaMalloc(&d_v, size * sizeof(float));
+    cudaMemcpy(d_v, h_v, size * sizeof(float), cudaMemcpyHostToDevice);
 
     int number_of_restricted_dims = restricted_scy_tree_list[0]->number_of_restricted_dims;
 
@@ -723,12 +729,12 @@ void GPU_Clustering(vector<int *> new_neighborhoods_list, vector<int *> new_neig
         compute_is_dense_rectangular<<< grid, number_of_threads >> >
                 (d_is_dense, d_points_list, d_number_of_points, d_neighborhoods_list, neighborhood_size,
                  d_neighborhood_end_list, d_X, d_restricted_dims_list,
-                 number_of_restricted_dims, F, n, num_obj, d);
+                 number_of_restricted_dims, F, n, num_obj, d, d_v);
     } else {
         compute_is_dense<<< grid, number_of_threads >> >
                 (d_is_dense, d_points_list, d_number_of_points, d_neighborhoods_list, neighborhood_size,
                  d_neighborhood_end_list, d_X, d_restricted_dims_list,
-                 number_of_restricted_dims, F, n, num_obj, d);
+                 number_of_restricted_dims, F, n, num_obj, d, d_v);
     }
 
     gpuErrchk(cudaPeekAtLastError());

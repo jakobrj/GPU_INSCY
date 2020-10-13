@@ -7,6 +7,7 @@
 #include "src/utils/util.cuh"
 #include "src/utils/TmpMalloc.cuh"
 #include "src/structures/SCY_tree.h"
+#include "src/structures/Neighborhood_tree.h"
 #include "src/structures/GPU_SCY_tree.cuh"
 #include "src/algorithms/Clustering.h"
 #include "src/algorithms/GPU_Clustering.cuh"
@@ -17,21 +18,37 @@
 
 using namespace std;
 
-
 vector<vector<vector<int>>> run_INSCY(at::Tensor X, float neighborhood_size, float F, int num_obj, int min_size, float r, int number_of_cells,
-              bool rectangular) {
+               bool rectangular) {
 
     int n = X.size(0);
     int d = X.size(1);
 
+    float *maxs = new float[d];
+    float *mins = new float[d];
     int *subspace = new int[d];
-    for (int i = 0; i < d; i++) {
-        subspace[i] = i;
+    for (int j = 0; j < d; j++) {
+        subspace[j] = j;
+        maxs[j] = std::numeric_limits<float>::lowest();
+        mins[j] = std::numeric_limits<float>::max();
     }
 
-    SCY_tree *scy_tree = new SCY_tree(X, subspace, number_of_cells, d, n, neighborhood_size);
-    SCY_tree *neighborhood_tree = new SCY_tree(X, subspace, ceil(1. / neighborhood_size), d, n,
-                                               neighborhood_size);
+    for (int i = 0; i < n; i++) {
+        float *x_i = X[i].data_ptr<float>();
+        for (int j = 0; j < d; j++) {
+            if (x_i[j] > maxs[j])
+                maxs[j] = x_i[j];
+            if (x_i[j] < mins[j])
+                mins[j] = x_i[j];
+        }
+    }
+
+
+    SCY_tree *scy_tree = new SCY_tree(X, subspace, number_of_cells, d, n, neighborhood_size, mins, maxs);
+    //SCY_tree *neighborhood_tree = new SCY_tree(X, subspace, ceil(1. / neighborhood_size), d, n,
+    //                                           neighborhood_size);
+
+    Neighborhood_tree *neighborhood_tree = new Neighborhood_tree(X, neighborhood_size, mins);
 
     map <vector<int>, vector<int>, vec_cmp> result;
 
@@ -59,22 +76,36 @@ vector<vector<vector<int>>> run_INSCY(at::Tensor X, float neighborhood_size, flo
     return tuple;
 }
 
-vector<vector<vector<int>>>
-run_GPU_INSCY(at::Tensor X, float neighborhood_size, float F, int num_obj, int min_size, float r, int number_of_cells,
+
+vector<vector<vector<int>>> run_GPU_INSCY(at::Tensor X, float neighborhood_size, float F, int num_obj, int min_size, float r, int number_of_cells,
               bool rectangular) {
 
     int n = X.size(0);
-    int subspace_size = X.size(1);
+    int d = X.size(1);
 
-    int *subspace = new int[subspace_size];
-    for (int i = 0; i < subspace_size; i++) {
-        subspace[i] = i;
+    float *maxs = new float[d];
+    float *mins = new float[d];
+    int *subspace = new int[d];
+    for (int j = 0; j < d; j++) {
+        subspace[j] = j;
+        maxs[j] = std::numeric_limits<float>::lowest();
+        mins[j] = std::numeric_limits<float>::max();
     }
 
-    float *d_X = copy_to_device(X, n, subspace_size);
-    cudaDeviceSynchronize();
+    for (int i = 0; i < n; i++) {
+        float *x_i = X[i].data_ptr<float>();
+        for (int j = 0; j < d; j++) {
+            if (x_i[j] > maxs[j])
+                maxs[j] = x_i[j];
+            if (x_i[j] < mins[j])
+                mins[j] = x_i[j];
+        }
+    }
 
-    SCY_tree *scy_tree = new SCY_tree(X, subspace, number_of_cells, subspace_size, n, neighborhood_size);
+    float *d_X = copy_to_device(X, n, d);
+    cudaDeviceSynchronize();
+    
+    SCY_tree *scy_tree = new SCY_tree(X, subspace, number_of_cells, d, n, neighborhood_size, mins, maxs);
 
     map<vector<int>, int *, vec_cmp> result;
 
@@ -89,9 +120,9 @@ run_GPU_INSCY(at::Tensor X, float neighborhood_size, float F, int num_obj, int m
     int *d_neighborhoods;
     int *d_neighborhood_end;
 
-    GPU_INSCY(d_neighborhoods, d_neighborhood_end, tmps, gpu_scy_tree, d_X, n, subspace_size,
+    GPU_INSCY(d_neighborhoods, d_neighborhood_end, tmps, gpu_scy_tree, d_X, n, d,
               neighborhood_size, F, num_obj, min_size,
-              result, 0, subspace_size, r, calls, rectangular);
+              result, 0, d, r, calls, rectangular);
     cudaDeviceSynchronize();
     printf("GPU_INSCY(%d)\n", calls);
 
@@ -125,22 +156,36 @@ run_GPU_INSCY(at::Tensor X, float neighborhood_size, float F, int num_obj, int m
     return tuple;
 }
 
-vector<vector<vector<int>>>
-run_GPU_INSCY_star(at::Tensor X, float neighborhood_size, float F, int num_obj, int min_size, float r,
-                   int number_of_cells, bool rectangular) {
+
+vector<vector<vector<int>>> run_GPU_INSCY_star(at::Tensor X, float neighborhood_size, float F, int num_obj, int min_size, float r,
+                        int number_of_cells, bool rectangular) {
 
     int n = X.size(0);
-    int subspace_size = X.size(1);
+    int d = X.size(1);
 
-    int *subspace = new int[subspace_size];
-    for (int i = 0; i < subspace_size; i++) {
-        subspace[i] = i;
+    float *maxs = new float[d];
+    float *mins = new float[d];
+    int *subspace = new int[d];
+    for (int j = 0; j < d; j++) {
+        subspace[j] = j;
+        maxs[j] = std::numeric_limits<float>::lowest();
+        mins[j] = std::numeric_limits<float>::max();
     }
 
-    float *d_X = copy_to_device(X, n, subspace_size);
+    for (int i = 0; i < n; i++) {
+        float *x_i = X[i].data_ptr<float>();
+        for (int j = 0; j < d; j++) {
+            if (x_i[j] > maxs[j])
+                maxs[j] = x_i[j];
+            if (x_i[j] < mins[j])
+                mins[j] = x_i[j];
+        }
+    }
+
+    float *d_X = copy_to_device(X, n, d);
     cudaDeviceSynchronize();
 
-    SCY_tree *scy_tree = new SCY_tree(X, subspace, number_of_cells, subspace_size, n, neighborhood_size);
+    SCY_tree *scy_tree = new SCY_tree(X, subspace, number_of_cells, d, n, neighborhood_size, mins, maxs);
 
     map<vector<int>, int *, vec_cmp> result;
 
@@ -157,9 +202,9 @@ run_GPU_INSCY_star(at::Tensor X, float neighborhood_size, float F, int num_obj, 
     int *d_neighborhood_sizes;
     int *d_neighborhood_end;
 
-    GPU_INSCY_star(d_neighborhoods, d_neighborhood_end, tmps, scy_tree_gpu, d_X, n, subspace_size,
+    GPU_INSCY_star(d_neighborhoods, d_neighborhood_end, tmps, scy_tree_gpu, d_X, n, d,
                    neighborhood_size, F, num_obj, min_size,
-                   result, 0, subspace_size, r, calls, rectangular);
+                   result, 0, d, r, calls, rectangular);
     cudaDeviceSynchronize();
     printf("GPU_INSCY_star(%d)\n", calls);
 
@@ -193,25 +238,37 @@ run_GPU_INSCY_star(at::Tensor X, float neighborhood_size, float F, int num_obj, 
 }
 
 
-vector<vector<vector<int>>>
-run_GPU_INSCY_memory(at::Tensor X, float neighborhood_size, float F, int num_obj, int min_size, float r,
-                    int number_of_cells, bool rectangular) {
+vector<vector<vector<int>>> run_GPU_INSCY_memory(at::Tensor X, float neighborhood_size, float F, int num_obj, int min_size, float r,
+                          int number_of_cells, bool rectangular) {
 
     int n = X.size(0);
-    int subspace_size = X.size(1);
+    int d = X.size(1);
 
-    int *subspace = new int[subspace_size];
-    for (int i = 0; i < subspace_size; i++) {
-        subspace[i] = i;
+    float *maxs = new float[d];
+    float *mins = new float[d];
+    int *subspace = new int[d];
+    for (int j = 0; j < d; j++) {
+        subspace[j] = j;
+        maxs[j] = std::numeric_limits<float>::lowest();
+        mins[j] = std::numeric_limits<float>::max();
     }
 
-    float *d_X = copy_to_device(X, n, subspace_size);
+    for (int i = 0; i < n; i++) {
+        float *x_i = X[i].data_ptr<float>();
+        for (int j = 0; j < d; j++) {
+            if (x_i[j] > maxs[j])
+                maxs[j] = x_i[j];
+            if (x_i[j] < mins[j])
+                mins[j] = x_i[j];
+        }
+    }
+
+    float *d_X = copy_to_device(X, n, d);
     cudaDeviceSynchronize();
 
-    SCY_tree *scy_tree = new SCY_tree(X, subspace, number_of_cells, subspace_size, n, neighborhood_size);
+    SCY_tree *scy_tree = new SCY_tree(X, subspace, number_of_cells, d, n, neighborhood_size, mins, maxs);
 
     map<vector<int>, int *, vec_cmp> result;
-
 
 
     int calls = 0;
@@ -227,9 +284,9 @@ run_GPU_INSCY_memory(at::Tensor X, float neighborhood_size, float F, int num_obj
     int *d_neighborhood_end;
 
 
-    GPU_INSCY_memory(d_neighborhoods, d_neighborhood_end, tmps, scy_tree_gpu, d_X, n, subspace_size,
+    GPU_INSCY_memory(d_neighborhoods, d_neighborhood_end, tmps, scy_tree_gpu, d_X, n, d,
                      neighborhood_size, F, num_obj, min_size,
-                     result, 0, subspace_size, r, calls, rectangular);
+                     result, 0, d, r, calls, rectangular);
     cudaDeviceSynchronize();
     printf("GPU_INSCY_memory(%d)\n", calls);
 

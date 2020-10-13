@@ -482,7 +482,7 @@ vector<float> m_get_col(vector <vector<float>> m, int i) {
 }
 
 float v_min(std::vector<float> v) {
-    float min = 100000.;
+    float min = std::numeric_limits<float>::infinity();
     for (int i = 0; i < v.size(); i++) {
         if (v[i] < min) {
             min = v[i];

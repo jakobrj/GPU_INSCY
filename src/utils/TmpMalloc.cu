@@ -216,9 +216,6 @@ int *TmpMalloc::malloc_nodes() {
     } else {
         cudaMalloc(&tmp, number_of_nodes * sizeof(int));
         nodes_count++;
-//        cudaDeviceSynchronize();
-//        printf("number_of_nodes: %d\n", this->number_of_nodes);
-//        gpuErrchk(cudaPeekAtLastError());
     }
     return tmp;
 }

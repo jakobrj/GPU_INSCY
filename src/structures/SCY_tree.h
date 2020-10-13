@@ -13,6 +13,8 @@ using namespace std;
 
 class Node;
 
+class Neighborhood_tree;
+
 class GPU_SCY_tree;
 
 struct vec_cmp;
@@ -25,20 +27,23 @@ public:
     int number_of_cells;
     int number_of_points;
 
+    float v = 1.;
+
+    float * maxs;
+    float * mins;
     int *dims;
     int *restricted_dims;
     bool is_s_connected;
-    float cell_size;
 
     shared_ptr <Node> root;
 
-    SCY_tree(at::Tensor X, int *subspace, int number_of_cells, int subspace_size, int n, float neighborhood_size);
+    SCY_tree(at::Tensor X, int *subspace, int number_of_cells, int subspace_size, int n, float neighborhood_size, float *mins, float *maxs);
 
-    SCY_tree();
+    SCY_tree(float *mins, float *maxs, float v);
 
     SCY_tree *restrict(int dim_no, int cell_no);
 
-    int get_cell_no(float x_ij);
+    int get_cell_no(float x_ij, int j);
 
     shared_ptr <Node> set_node(shared_ptr <Node> node, int &cell_no, int &node_counter);
 
@@ -51,7 +56,7 @@ public:
 
     SCY_tree *mergeWithNeighbors(SCY_tree *parent_SCYTree, int dim_no, int &cell_no);
 
-    bool pruneRecursionAndRemove2(int min_size, SCY_tree *neighborhood_tree, at::Tensor X, float neighborhood_size,
+    bool pruneRecursionAndRemove2(int min_size, Neighborhood_tree *neighborhood_tree, at::Tensor X, float neighborhood_size,
                                   int *subspace, int subspace_size, float F, int num_obj, int n, int d,
                                   bool rectangular);
 
