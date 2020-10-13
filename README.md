@@ -20,6 +20,6 @@ python run_example.py
 ```
 Running the script should take around 5 minutes and end out a plot of the average running times.
 The pendigits dataset is not a part of the example since it would take around 8 hours for INSCY to process.
-The current example assume min-max normalized data.
+The current implementation assume min-max normalized data.
 
 ![plot](example.png)
