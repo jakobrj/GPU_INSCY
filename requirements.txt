@@ -3,3 +3,4 @@ numpy
 ninja
 pandas
 matplotlib
+scikit-learn
