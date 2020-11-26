@@ -87,7 +87,7 @@ def run_diff_number_of_cl():
 
 def run_diff_std():
     n, d, c, N_size, F, r, num_obj, min_size, cl, _, dims_pr_cl, rounds = get_standard_params()
-    stds = [1.*i for i in range(1,10+1)]
+    stds = [1.*i for i in range(3,10+1)]
 
     if not os.path.exists('experiments_data/inc_std/'):
         os.makedirs('experiments_data/inc_std/')
