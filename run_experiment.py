@@ -11,9 +11,9 @@ def get_standard_params():
     num_obj = 2
     F = 1.
     r = 1.
-    min_size = 0.05
+    min_size = 0.01
     N_size = 0.01
-    cl = 10
+    cl = 20
     std = 5.
     dims_pr_cl = 12
     rounds = 3
@@ -65,6 +65,8 @@ def run_diff_number_of_cl():
     n, d, c, N_size, F, r, num_obj, min_size, _, std, dims_pr_cl, rounds = get_standard_params()
     cls = [2, 4, 8, 16, 32, 64]
 
+    print("running experiment: inc_cl")
+
     if not os.path.exists('experiments_data/inc_cl/'):
         os.makedirs('experiments_data/inc_cl/')
 
@@ -73,6 +75,7 @@ def run_diff_number_of_cl():
 
     avg_running_times = []
     for cl in cls:
+        print("cl:", cl)
         avg_running_time = 0.
         for round in range(rounds):
             running_time, subspaces, clusterings = run("inc_cl", "GPU_INSCY_memory", n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round)
@@ -89,6 +92,8 @@ def run_diff_std():
     n, d, c, N_size, F, r, num_obj, min_size, cl, _, dims_pr_cl, rounds = get_standard_params()
     stds = [1.*i for i in range(3,10+1)]
 
+    print("running experiment: inc_std")
+
     if not os.path.exists('experiments_data/inc_std/'):
         os.makedirs('experiments_data/inc_std/')
 
@@ -97,6 +102,7 @@ def run_diff_std():
 
     avg_running_times = []
     for std in stds:
+        print("std:", std)
         avg_running_time = 0.
         for round in range(rounds):
             running_time, subspaces, clusterings = run("inc_std", "GPU_INSCY_memory", n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round)
@@ -114,6 +120,8 @@ def run_diff_dims_pr_cl():
     n, d, c, N_size, F, r, num_obj, min_size, cl, std, _, rounds = get_standard_params()
     dims_pr_cls = [2, 4, 6, 8, 10, 12]
 
+    print("running experiment: inc_cl_d")
+
     if not os.path.exists('experiments_data/inc_cl_d/'):
         os.makedirs('experiments_data/inc_cl_d/')
 
@@ -122,6 +130,7 @@ def run_diff_dims_pr_cl():
 
     avg_running_times = []
     for dims_pr_cl in dims_pr_cls:
+        print("dims_pr_cl:", dims_pr_cl)
         avg_running_time = 0.
         for round in range(rounds):
             running_time, subspaces, clusterings = run("inc_cl_d", "GPU_INSCY_memory", n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round)
@@ -138,6 +147,8 @@ def run_diff_n():
     _, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds = get_standard_params()
     ns =  [8*1000, 16*1000, 32*1000, 64*1000, 128*1000, 256*1000, 512*1000, 1024*1000]
 
+    print("running experiment: inc_n_large")
+
     if not os.path.exists('experiments_data/inc_n_large/'):
         os.makedirs('experiments_data/inc_n_large/')
 
@@ -146,7 +157,7 @@ def run_diff_n():
 
     avg_running_times = []
     for n in ns:
-        print(n)
+        print("n:", n)
         avg_running_time = 0.
         for round in range(rounds):
             running_time, subspaces, clusterings = run("inc_n_large", "GPU_INSCY_memory", n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round)
@@ -161,6 +172,8 @@ def run_diff_d():
     n, _, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds = get_standard_params()
     ds = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 
+    print("running experiment: inc_d_large")
+
     if not os.path.exists('experiments_data/inc_d_large/'):
         os.makedirs('experiments_data/inc_d_large/')
 
@@ -169,6 +182,7 @@ def run_diff_d():
 
     avg_running_times = []
     for d in ds:
+    print("d:", d)
         avg_running_time = 0.
         for round in range(rounds):
             running_time, subspaces, clusterings = run("inc_d_large", "GPU_INSCY_memory", n, d, c, N_size, F, r, num_obj, min_size, cl, std, min(dims_pr_cl, d), round)
@@ -184,6 +198,8 @@ def run_diff_d_v2():
     n, _, c, N_size, F, r, num_obj, min_size, cl, std, _, rounds = get_standard_params()
     ds = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 
+    print("running experiment: inc_d_large_v2")
+
     if not os.path.exists('experiments_data/inc_d_large_v2/'):
         os.makedirs('experiments_data/inc_d_large_v2/')
 
@@ -192,6 +208,7 @@ def run_diff_d_v2():
 
     avg_running_times = []
     for d in ds:
+        print("d:", d)
         dims_pr_cl = int(d*0.8)
         avg_running_time = 0.
         for round in range(rounds):
