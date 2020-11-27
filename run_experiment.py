@@ -182,7 +182,7 @@ def run_diff_d():
 
     avg_running_times = []
     for d in ds:
-    print("d:", d)
+        print("d:", d)
         avg_running_time = 0.
         for round in range(rounds):
             running_time, subspaces, clusterings = run("inc_d_large", "GPU_INSCY_memory", n, d, c, N_size, F, r, num_obj, min_size, cl, std, min(dims_pr_cl, d), round)
