@@ -14,7 +14,7 @@ def get_standard_params():
     num_obj = 2
     F = 1.
     r = 1.
-    cl = 20
+    cl = 15
     min_size = 1/(4*cl)
     std = 5.
     dims_pr_cl = 3
