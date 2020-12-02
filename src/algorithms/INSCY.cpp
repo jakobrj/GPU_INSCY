@@ -32,7 +32,7 @@ INSCY(SCY_tree *scy_tree, Neighborhood_tree *neighborhood_tree, at::Tensor X, in
             restricted_scy_tree->mergeWithNeighbors(scy_tree, dim_no, cell_no);
 
             int before = restricted_scy_tree->number_of_points;
-            if (restricted_scy_tree->pruneRecursionAndRemove2(min_size, neighborhood_tree, X, neighborhood_size,
+            if (restricted_scy_tree->pruneRecursionAndRemove(min_size, neighborhood_tree, X, neighborhood_size,
                                                               restricted_scy_tree->restricted_dims,
                                                               restricted_scy_tree->number_of_restricted_dims, F,
                                                               num_obj, n, d, rectangular)) {

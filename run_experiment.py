@@ -4,34 +4,48 @@ import sys
 import time
 import matplotlib.pyplot as plt
 
+font_size = 20
+
 def get_standard_params():
+
     d = 15
     n = 25000
     c = 4
     num_obj = 2
     F = 1.
     r = 1.
-    min_size = 0.01
-    N_size = 0.01
     cl = 20
+    min_size = 1/(4*cl)
     std = 5.
-    dims_pr_cl = 12
+    dims_pr_cl = 3
+    N_size = 0.01 #(((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200.
     rounds = 3
+
     return n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds
 
-def get_run_file(experiment, method, n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round):
+def get_run_file(experiment, method, n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, generator, round):
     return "experiments_data/"+ experiment +"/" + method + \
               "n" + str(n) + "d" + str(d) + "c" + str(c) + \
               "N_size" + str(N_size) + "F" + str(F) + "r" + str(r) + \
               "num_obj" + str(num_obj) + "min_size" + str(min_size) + \
-              "cl" + str(cl) + "std" + str(std) + "dims_pr_cl" + str(dims_pr_cl) + "round" + str(round) + ".npz"
+              "cl" + str(cl) + "std" + str(std) + "dims_pr_cl" + str(dims_pr_cl) + "generator_" + generator + "_round" + str(round) + ".npz"
 
-def run(experiment, method, n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round):
+def run(experiment, method, n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round, generator="gaussian"):
 
-    run_file = get_run_file(experiment, method, n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round)
+    def load_synt_wrap(d, n, cl, std, cl_n=None, cl_d=None, noise=0.01, re=0):
+        return load_synt(d, n, cl, re, cl_d = cl_d)
+
+    gen = None
+    if generator == "gaussian":
+        gen = load_synt_gauss
+    elif generator == "uniform":
+        gen = load_synt_wrap
+
+
+    run_file = get_run_file(experiment, method, n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, generator, round)
 
     if not os.path.exists(run_file):
-        X = load_synt_gauss(n=n, d=d, cl=cl, std=std, re=round, cl_d=dims_pr_cl)
+        X = gen(n=n, d=d, cl=cl, std=std, re=round, cl_d=dims_pr_cl)
 
         t0 = time.time()
         subspaces, clusterings = GPU_INSCY_memory(X, N_size, F, num_obj, int(n * min_size), r, number_of_cells=c, rectangular=True)
@@ -48,13 +62,14 @@ def run(experiment, method, n, d, c, N_size, F, r, num_obj, min_size, cl, std, d
 
     return running_time, subspaces, clusterings
 
-def plot(avg_running_times, xs, x_label, experiment):
-    plt.plot(xs[:len(avg_running_times)], avg_running_times, label="GPU-INSCY", color="orange")
+def plot(avg_running_times, xs, x_label, experiment, y_max=None):
+    plt.rcParams.update({'font.size': font_size})
+    plt.plot(xs[:len(avg_running_times)], avg_running_times, color="orange", marker = "x")
     plt.gcf().subplots_adjust(left=0.14)
-    plt.legend(loc='upper left')
     plt.ylabel('time in seconds')
     plt.xlabel(x_label)
-    #plt.ylim(0,900)
+    if not y_max is None:
+        plt.ylim(0, y_max)
     plt.tight_layout()
     plt.savefig("plots/"+experiment+".pdf")
     #plt.show()
@@ -76,6 +91,9 @@ def run_diff_number_of_cl():
     avg_running_times = []
     for cl in cls:
         print("cl:", cl)
+
+        #N_size = (((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200.
+
         avg_running_time = 0.
         for round in range(rounds):
             running_time, subspaces, clusterings = run("inc_cl", "GPU_INSCY_memory", n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round)
@@ -144,8 +162,10 @@ def run_diff_dims_pr_cl():
 
 
 def run_diff_n():
-    _, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds = get_standard_params()
-    ns =  [8*1000, 16*1000, 32*1000, 64*1000, 128*1000, 256*1000, 512*1000, 1024*1000]
+    _, d, c, _, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds = get_standard_params()
+    ns =  [8000, 16000, 32000, 64000, 128000, 256000, 512000]
+    N_sizes = [(((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200. for n in ns]
+
 
     print("running experiment: inc_n_large")
 
@@ -156,7 +176,7 @@ def run_diff_n():
         os.makedirs('plots/')
 
     avg_running_times = []
-    for n in ns:
+    for n , N_size in zip(ns, N_sizes):
         print("n:", n)
         avg_running_time = 0.
         for round in range(rounds):
@@ -220,6 +240,44 @@ def run_diff_d_v2():
 
     plot(avg_running_times, ds, "number of dimensions", "inc_d_large_v2")
 
+def run_diff_distribution():
+    n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds = get_standard_params()
+
+    gens = ['gaussian','uniform']
+
+    print("running experiment: diff_distribution")
+
+    if not os.path.exists('experiments_data/diff_dist/'):
+        os.makedirs('experiments_data/diff_dist/')
+
+    if not os.path.exists('plots/'):
+        os.makedirs('plots/')
+
+    avg_running_times = []
+    for gen in gens:
+        print("gen:", gen)
+        avg_running_time = 0.
+        for round in range(rounds):
+            running_time, subspaces, clusterings = run("diff_dist", "GPU_INSCY_memory", n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round, generator=gen)
+            avg_running_time += running_time
+
+        avg_running_time /= rounds
+        avg_running_times.append(avg_running_time)
+
+
+    plt.rcParams.update({'font.size': font_size})
+    x = np.arange(2)
+    plt.bar(x, height=avg_running_times, color="orange")
+    plt.xticks(x, ['Gaussian','Uniform'])
+
+    plt.gcf().subplots_adjust(left=0.14)
+    plt.ylabel('time in seconds')
+    plt.tight_layout()
+    plt.savefig("plots/diff_dist.pdf")
+    #plt.show()
+    plt.clf()
+
+
 
 experiment = sys.argv[1]
 if experiment == "inc_cl":
@@ -234,10 +292,11 @@ elif experiment == "inc_d_large":
     run_diff_d()
 elif experiment == "inc_d_large_v2":
     run_diff_d_v2()
+elif experiment == "diff_dist":
+    run_diff_distribution()
 elif experiment == "all":
-    run_diff_number_of_cl()
-    run_diff_std()
-    run_diff_dims_pr_cl()
     run_diff_n()
     run_diff_d()
-    run_diff_d_v2()
+    run_diff_number_of_cl()
+    run_diff_std()
+    run_diff_distribution()

@@ -991,6 +991,7 @@ GPU_SCY_tree::restrict_merge(TmpMalloc *tmps, int first_dim_no, int number_of_di
                                                                          new_number_of_points,
                                                                          scy_tree->number_of_cells, mins, maxs,
                                                                          scy_tree->v * ra);
+                    restricted_scy_tree->v_max = this->v_max;
                     gpuErrchk(cudaPeekAtLastError());
 
                     L[i][cell_no] = restricted_scy_tree;
@@ -1226,7 +1227,7 @@ GPU_SCY_tree::pruneRecursion(TmpMalloc *tmps, int min_size, float *d_X, int n, i
                                                                                                         d_X, n, d,
                                                                                                         F, num_obj,
                                                                                                         neighborhood_size,
-                                                                                                        this->v);
+                                                                                                        this->v_max);//todo fix volumn - not a problem since we run on standadized data
         cudaDeviceSynchronize();
         gpuErrchk(cudaPeekAtLastError());
     } else {
@@ -1238,7 +1239,7 @@ GPU_SCY_tree::pruneRecursion(TmpMalloc *tmps, int min_size, float *d_X, int n, i
                                                                                             this->number_of_restricted_dims,
                                                                                             d_X, n, d,
                                                                                             F, num_obj,
-                                                                                            neighborhood_size, this->v);
+                                                                                            neighborhood_size, this->v_max);
         cudaDeviceSynchronize();
         gpuErrchk(cudaPeekAtLastError());
     }

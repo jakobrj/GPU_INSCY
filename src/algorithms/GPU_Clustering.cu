@@ -90,8 +90,8 @@ float omega_gpu(int subspace_size) {
 __global__
 void
 kernel_find_neighborhood_sizes_1(int **d_new_neighborhood_sizes_list, float *d_X, int n, int d,
-                                      float neighborhood_size,
-                                      int **subspace_list, int *d_subspace_size) {
+                                 float neighborhood_size,
+                                 int **subspace_list, int *d_subspace_size) {
     int k = blockIdx.y;
 
     int *d_new_neighborhood_sizes = d_new_neighborhood_sizes_list[k];
@@ -116,8 +116,8 @@ kernel_find_neighborhood_sizes_1(int **d_new_neighborhood_sizes_list, float *d_X
 __global__
 void
 kernel_find_neighborhoods_1(int **d_new_neighborhoods_list, int **d_new_neighborhood_end_list, float *d_X, int n,
-                                 int d,
-                                 float neighborhood_size, int **subspace_list, int *d_subspace_size) {
+                            int d,
+                            float neighborhood_size, int **subspace_list, int *d_subspace_size) {
     int k = blockIdx.y;
 
     int *d_new_neighborhoods = d_new_neighborhoods_list[k];
@@ -130,6 +130,9 @@ kernel_find_neighborhoods_1(int **d_new_neighborhoods_list, int **d_new_neighbor
 
     int new_offset = i > 0 ? d_new_neighborhood_end[i - 1] : 0;
     int *d_new_neighborhood = d_new_neighborhoods + new_offset;
+
+    if(new_offset == d_new_neighborhood_end[i])
+        return;
 
     int number_of_neighbors = 0;
     for (int j = 0; j < n; j++) {
@@ -146,10 +149,10 @@ kernel_find_neighborhoods_1(int **d_new_neighborhoods_list, int **d_new_neighbor
 __global__
 void
 kernel_find_neighborhood_sizes_2(int *d_neighborhoods, int *d_neighborhood_end,
-                                      int **d_new_neighborhood_sizes_list,
-                                      float *d_X, int n, int d, float neighborhood_size,
-                                      int **points_list, int *d_number_of_points,
-                                      int **subspace_list, int *d_subspace_size) {
+                                 int **d_new_neighborhood_sizes_list,
+                                 float *d_X, int n, int d, float neighborhood_size,
+                                 int **points_list, int *d_number_of_points,
+                                 int **subspace_list, int *d_subspace_size) {
     int k = blockIdx.y;
 
     int *d_new_neighborhood_sizes = d_new_neighborhood_sizes_list[k];
@@ -181,10 +184,10 @@ kernel_find_neighborhood_sizes_2(int *d_neighborhoods, int *d_neighborhood_end,
 
 __global__
 void kernel_find_neighborhoods_2(int *d_neighborhoods, int *d_neighborhood_end,
-                                      int **d_new_neighborhoods_list, int **d_new_neighborhood_end_list,
-                                      float *d_X, int n, int d, float neighborhood_size,
-                                      int **points_list, int *d_number_of_points,
-                                      int **subspace_list, int *d_subspace_size) {
+                                 int **d_new_neighborhoods_list, int **d_new_neighborhood_end_list,
+                                 float *d_X, int n, int d, float neighborhood_size,
+                                 int **points_list, int *d_number_of_points,
+                                 int **subspace_list, int *d_subspace_size) {
     int k = blockIdx.y;
 
     int *d_new_neighborhoods = d_new_neighborhoods_list[k];
@@ -219,9 +222,9 @@ void kernel_find_neighborhoods_2(int *d_neighborhoods, int *d_neighborhood_end,
 }
 
 pair<int **, int **> find_neighborhoods(TmpMalloc *tmps, int *d_neighborhoods, int *d_neighborhood_end,
-                                            float *d_X, int n, int d, GPU_SCY_tree *scy_tree,
-                                            vector <vector<GPU_SCY_tree *>> L_merged,
-                                            float neighborhood_size) {
+                                        float *d_X, int n, int d, GPU_SCY_tree *scy_tree,
+                                        vector <vector<GPU_SCY_tree *>> L_merged,
+                                        float neighborhood_size) {
     int size = 0;
 
     for (vector < GPU_SCY_tree * > list: L_merged) {
@@ -311,9 +314,9 @@ pair<int **, int **> find_neighborhoods(TmpMalloc *tmps, int *d_neighborhoods, i
         gpuErrchk(cudaPeekAtLastError());
 
         kernel_find_neighborhood_sizes_1<<<grid, block >> >(d_new_neighborhood_sizes_list,
-                                                                 d_X, n, d, neighborhood_size,
-                                                                 d_restricted_dims_list,
-                                                                 d_number_of_restricted_dims);
+                                                            d_X, n, d, neighborhood_size,
+                                                            d_restricted_dims_list,
+                                                            d_number_of_restricted_dims);
 
         gpuErrchk(cudaPeekAtLastError());
 
@@ -323,21 +326,24 @@ pair<int **, int **> find_neighborhoods(TmpMalloc *tmps, int *d_neighborhoods, i
             gpuErrchk(cudaPeekAtLastError());
             inclusive_scan_any(h_new_neighborhood_sizes_list[j], h_new_neighborhood_end_list[j], n, tmps);
             gpuErrchk(cudaPeekAtLastError());
-
+//            printf("n:%d\n", n);
+//            printf("size: %ld\n", total_size);
+//            printf("size*sizeof(int): %ld\n", total_size * sizeof(int));
             cudaMemcpy(&total_size, h_new_neighborhood_end_list[j] + n - 1, sizeof(int), cudaMemcpyDeviceToHost);
             gpuErrchk(cudaPeekAtLastError());
 
             int *tmp;
             cudaMalloc(&tmp, total_size * sizeof(int));
             h_new_neighborhoods_list[j] = tmp;
+            gpuErrchk(cudaPeekAtLastError());
         }
 
         cudaMemcpy(d_new_neighborhoods_list, h_new_neighborhoods_list, size * sizeof(int *), cudaMemcpyHostToDevice);
 
         kernel_find_neighborhoods_1<<<grid, block >> >(d_new_neighborhoods_list, d_new_neighborhood_end_list,
-                                                            d_X, n, d, neighborhood_size,
-                                                            d_restricted_dims_list,
-                                                            d_number_of_restricted_dims);
+                                                       d_X, n, d, neighborhood_size,
+                                                       d_restricted_dims_list,
+                                                       d_number_of_restricted_dims);
 
 
         gpuErrchk(cudaPeekAtLastError());
@@ -351,12 +357,12 @@ pair<int **, int **> find_neighborhoods(TmpMalloc *tmps, int *d_neighborhoods, i
         gpuErrchk(cudaPeekAtLastError());
 
         kernel_find_neighborhood_sizes_2<<<grid, block >> >(d_neighborhoods, d_neighborhood_end,
-                                                                 d_new_neighborhood_sizes_list, d_X, n, d,
-                                                                 neighborhood_size,
-                                                                 d_points_list,
-                                                                 d_number_of_points,
-                                                                 d_restricted_dims_list,
-                                                                 d_number_of_restricted_dims);
+                                                            d_new_neighborhood_sizes_list, d_X, n, d,
+                                                            neighborhood_size,
+                                                            d_points_list,
+                                                            d_number_of_points,
+                                                            d_restricted_dims_list,
+                                                            d_number_of_restricted_dims);
         gpuErrchk(cudaPeekAtLastError());
 
         for (int j = 0; j < size; j++) {
@@ -376,12 +382,12 @@ pair<int **, int **> find_neighborhoods(TmpMalloc *tmps, int *d_neighborhoods, i
         cudaMemcpy(d_new_neighborhoods_list, h_new_neighborhoods_list, size * sizeof(int *), cudaMemcpyHostToDevice);
 
         kernel_find_neighborhoods_2<<<grid, block >> >(d_neighborhoods, d_neighborhood_end,
-                                                            d_new_neighborhoods_list, d_new_neighborhood_end_list,
-                                                            d_X, n, d, neighborhood_size,
-                                                            d_points_list,
-                                                            d_number_of_points,
-                                                            d_restricted_dims_list,
-                                                            d_number_of_restricted_dims);
+                                                       d_new_neighborhoods_list, d_new_neighborhood_end_list,
+                                                       d_X, n, d, neighborhood_size,
+                                                       d_points_list,
+                                                       d_number_of_points,
+                                                       d_restricted_dims_list,
+                                                       d_number_of_restricted_dims);
 
     }
 
@@ -404,7 +410,7 @@ pair<int **, int **> find_neighborhoods(TmpMalloc *tmps, int *d_neighborhoods, i
 
 pair<int **, int **>
 find_neighborhoods_star(TmpMalloc *tmps, int *d_neighborhoods, int *d_neighborhood_end, float *d_X, int n, int d,
-                           GPU_SCY_tree *scy_tree, vector <vector<GPU_SCY_tree *>> L_merged, float neighborhood_size) {
+                        GPU_SCY_tree *scy_tree, vector <vector<GPU_SCY_tree *>> L_merged, float neighborhood_size) {
     int size = 0;
 
     for (vector < GPU_SCY_tree * > list: L_merged) {
@@ -486,9 +492,9 @@ find_neighborhoods_star(TmpMalloc *tmps, int *d_neighborhoods, int *d_neighborho
     gpuErrchk(cudaPeekAtLastError());
 
     kernel_find_neighborhood_sizes_1<<<grid, block >> >(d_new_neighborhood_sizes_list,
-                                                             d_X, n, d, neighborhood_size,
-                                                             d_restricted_dims_list,
-                                                             d_number_of_restricted_dims);
+                                                        d_X, n, d, neighborhood_size,
+                                                        d_restricted_dims_list,
+                                                        d_number_of_restricted_dims);
 
     gpuErrchk(cudaPeekAtLastError());
 
@@ -510,9 +516,9 @@ find_neighborhoods_star(TmpMalloc *tmps, int *d_neighborhoods, int *d_neighborho
     cudaMemcpy(d_new_neighborhoods_list, h_new_neighborhoods_list, size * sizeof(int *), cudaMemcpyHostToDevice);
 
     kernel_find_neighborhoods_1<<<grid, block >> >(d_new_neighborhoods_list, d_new_neighborhood_end_list,
-                                                        d_X, n, d, neighborhood_size,
-                                                        d_restricted_dims_list,
-                                                        d_number_of_restricted_dims);
+                                                   d_X, n, d, neighborhood_size,
+                                                   d_restricted_dims_list,
+                                                   d_number_of_restricted_dims);
 
     gpuErrchk(cudaPeekAtLastError());
 
@@ -536,8 +542,8 @@ find_neighborhoods_star(TmpMalloc *tmps, int *d_neighborhoods, int *d_neighborho
 __global__
 void
 disjoint_set_clustering(int **d_clustering_list,
-                                 int **d_neighborhoods_list, int **d_neighborhood_end_list,
-                                 bool *d_is_dense_list, int **d_points_list, int *d_number_of_points, int n) {
+                        int **d_neighborhoods_list, int **d_neighborhood_end_list,
+                        bool *d_is_dense_list, int **d_points_list, int *d_number_of_points, int n) {
     int j = blockIdx.x;
     int number_of_points = d_number_of_points[j];
     int *d_clustering = d_clustering_list[j];
@@ -596,10 +602,10 @@ disjoint_set_clustering(int **d_clustering_list,
 
 __global__
 void compute_is_dense_rectangular(bool *d_is_dense_list, int **d_points_list, int *d_number_of_points,
-                                           int **d_neighborhoods_list, float neighborhood_size,
-                                           int **d_neighborhood_end_list,
-                                           float *X, int **subspace_list, int subspace_size, float F, int n,
-                                           int num_obj, int d, float *d_v) {
+                                  int **d_neighborhoods_list, float neighborhood_size,
+                                  int **d_neighborhood_end_list,
+                                  float *X, int **subspace_list, int subspace_size, float F, int n,
+                                  int num_obj, int d, float *d_v) {
     int j = blockIdx.y;
 
     int number_of_points = d_number_of_points[j];
@@ -623,10 +629,10 @@ void compute_is_dense_rectangular(bool *d_is_dense_list, int **d_points_list, in
 
 __global__
 void compute_is_dense(bool *d_is_dense_list, int **d_points_list, int *d_number_of_points,
-                               int **d_neighborhoods_list, float neighborhood_size,
-                               int **d_neighborhood_end_list,
-                               float *X, int **subspace_list, int subspace_size, float F, int n,
-                               int num_obj, int d, float *d_v) {
+                      int **d_neighborhoods_list, float neighborhood_size,
+                      int **d_neighborhood_end_list,
+                      float *X, int **subspace_list, int subspace_size, float F, int n,
+                      int num_obj, int d, float *d_v) {
 
     int j = blockIdx.y;
 

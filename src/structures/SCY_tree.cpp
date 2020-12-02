@@ -33,6 +33,9 @@ SCY_tree::SCY_tree(at::Tensor X, int *subspace, int number_of_cells, int subspac
 
     this->mins = mins;
     this->maxs = maxs;
+    for (int j = 0; j < number_of_dims; j++) {
+        this->v_max *= this->maxs[j] - this->mins[j];
+    }
 
     shared_ptr <Node> root(new Node(-1));
     int node_counter = 0;
@@ -73,6 +76,7 @@ int *add_restricted_dim(int *restricted_dims, int number_of_restricted_dims, int
 SCY_tree *SCY_tree::restrict(int dim_no, int cell_no) {
     float ra = this->maxs[dim_no] - this->mins[dim_no];
     auto *restricted_scy_tree = new SCY_tree(this->mins, this->maxs, this->v * ra);
+    restricted_scy_tree->v_max = this->v_max;
     restricted_scy_tree->number_of_cells = this->number_of_cells;
     restricted_scy_tree->number_of_dims = this->number_of_dims - 1;
     restricted_scy_tree->restricted_dims = add_restricted_dim(this->restricted_dims, this->number_of_restricted_dims,
@@ -317,6 +321,7 @@ GPU_SCY_tree *SCY_tree::convert_to_GPU_SCY_tree() {
                                                     this->number_of_points, this->number_of_cells,
                                                     this->mins, this->maxs, this->v);
 
+    scy_tree_array->v_max = this->v_max;
     scy_tree_array->h_dims = this->dims;
     scy_tree_array->h_restricted_dims = this->restricted_dims;
     scy_tree_array->is_s_connected = this->is_s_connected;
@@ -409,7 +414,7 @@ void SCY_tree::get_leafs(shared_ptr <Node> &node, vector <shared_ptr<Node>> &lea
     }
 }
 
-bool SCY_tree::pruneRecursionAndRemove2(int min_size, Neighborhood_tree *neighborhood_tree, at::Tensor X,
+bool SCY_tree::pruneRecursionAndRemove(int min_size, Neighborhood_tree *neighborhood_tree, at::Tensor X,
                                         float neighborhood_size,
                                         int *subspace, int subspace_size, float F, int num_obj, int n, int d,
                                         bool rectangular) {
@@ -417,7 +422,7 @@ bool SCY_tree::pruneRecursionAndRemove2(int min_size, Neighborhood_tree *neighbo
     vector <shared_ptr<Node>> leafs;
     this->get_leafs(this->root, leafs);
 
-    float a = alpha(d, neighborhood_size, n, this->v);
+    float a = alpha(d, neighborhood_size, n, this->v_max);
     float w = omega(d);
 
     float ex = n * c(d) * pow(neighborhood_size, d);

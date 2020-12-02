@@ -28,6 +28,7 @@ public:
     int number_of_points;
 
     float v = 1.;
+    float v_max = 1.;
 
     float * maxs;
     float * mins;
@@ -56,7 +57,7 @@ public:
 
     SCY_tree *mergeWithNeighbors(SCY_tree *parent_SCYTree, int dim_no, int &cell_no);
 
-    bool pruneRecursionAndRemove2(int min_size, Neighborhood_tree *neighborhood_tree, at::Tensor X, float neighborhood_size,
+    bool pruneRecursionAndRemove(int min_size, Neighborhood_tree *neighborhood_tree, at::Tensor X, float neighborhood_size,
                                   int *subspace, int subspace_size, float F, int num_obj, int n, int d,
                                   bool rectangular);
 

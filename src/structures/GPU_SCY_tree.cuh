@@ -18,6 +18,7 @@ public:
     bool freed_partial = false;
 
     float v = 1.;
+    float v_max = 1.;
 
     //host variables
     int number_of_cells;

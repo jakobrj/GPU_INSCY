@@ -42,8 +42,12 @@ def load_pendigits():
     return X
 
 
-def load_synt(d, n, cl, re):
-    name = "data_d" + str(d) + "_n" + str(n) + "_cl" + str(cl) + "_re" + str(re)
+def load_synt(d, n, cl, re, cl_d = None):
+
+    if cl_d is None:
+        cl_d = int(0.8 * d)
+
+    name = "data_d" + str(d) + "_n" + str(n) + "_cl" + str(cl) + "_cl_d" + str(cl_d) + "_re" + str(re)
 
 
     if not os.path.exists('data/gen/'):
@@ -53,7 +57,7 @@ def load_synt(d, n, cl, re):
 
     if not os.path.isfile(file):
         print("generating new data set")
-        os.system("data/cluster_generator -n" + str(n) + " -d" + str(d) + " -k" + str(int(0.8 * d))
+        os.system("data/cluster_generator -n" + str(n+1) + " -d" + str(d) + " -k" + str(cl_d)
                   + " -m" + str(cl) + " -f" + str(0.99) + " " + file)
 
     print("loading data set...")
