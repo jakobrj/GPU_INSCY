@@ -102,7 +102,36 @@ def run_diff_number_of_cl():
         avg_running_time /= rounds
         avg_running_times.append(avg_running_time)
 
-    plot(avg_running_times, cls, "number of clusters", "inc_cl")
+    plot(avg_running_times, cls, "number of clusters", "inc_cl", y_max=10.)
+
+def run_diff_number_of_cl_std():
+    n, d, c, N_size, F, r, num_obj, min_size, _, std, dims_pr_cl, rounds = get_standard_params()
+    cls = [2, 4, 8, 16, 32, 64]
+
+    print("running experiment: inc_cl")
+
+    if not os.path.exists('experiments_data/inc_cl_std/'):
+        os.makedirs('experiments_data/inc_cl_std/')
+
+    if not os.path.exists('plots/'):
+        os.makedirs('plots/')
+
+    avg_running_times = []
+    for cl in cls:
+        print("cl:", cl)
+
+        #N_size = (((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200.
+        std = 32*5/cl
+
+        avg_running_time = 0.
+        for round in range(rounds):
+            running_time, subspaces, clusterings = run("inc_cl_std", "GPU_INSCY_memory", n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round)
+            avg_running_time += running_time
+
+        avg_running_time /= rounds
+        avg_running_times.append(avg_running_time)
+
+    plot(avg_running_times, cls, "number of clusters", "inc_cl_std", y_max=10.)
 
 
 
@@ -129,7 +158,7 @@ def run_diff_std():
         avg_running_time /= rounds
         avg_running_times.append(avg_running_time)
 
-    plot(avg_running_times, stds, "standard deviation", "inc_std")
+    plot(avg_running_times, stds, "standard deviation", "inc_std", y_max=10.)
 
 
 
@@ -266,12 +295,15 @@ def run_diff_distribution():
 
 
     plt.rcParams.update({'font.size': font_size})
+#     plt.figure(figsize=(4,6))
     x = np.arange(2)
     plt.bar(x, height=avg_running_times, color="orange")
     plt.xticks(x, ['Gaussian','Uniform'])
 
     plt.gcf().subplots_adjust(left=0.14)
     plt.ylabel('time in seconds')
+    plt.xlabel('method')
+    plt.ylim((0.,10.))
     plt.tight_layout()
     plt.savefig("plots/diff_dist.pdf")
     #plt.show()
@@ -282,6 +314,8 @@ def run_diff_distribution():
 experiment = sys.argv[1]
 if experiment == "inc_cl":
     run_diff_number_of_cl()
+if experiment == "inc_cl_std":
+    run_diff_number_of_cl_std()
 elif experiment == "inc_std":
     run_diff_std()
 elif experiment == "inc_cl_d":
@@ -300,3 +334,4 @@ elif experiment == "all":
     run_diff_number_of_cl()
     run_diff_std()
     run_diff_distribution()
+    run_diff_number_of_cl_std()
