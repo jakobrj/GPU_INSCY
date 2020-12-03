@@ -220,7 +220,7 @@ def run_diff_n():
         avg_running_time /= rounds
         avg_running_times.append(avg_running_time)
 
-    plot(avg_running_times, ns, "number of points", "inc_n_large", y_max=1000)
+    plot(avg_running_times, ns, "number of points", "inc_n_large", y_max=1100)
 
 def run_diff_d():
     n, _, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds = get_standard_params()
@@ -245,7 +245,7 @@ def run_diff_d():
         avg_running_time /= rounds
         avg_running_times.append(avg_running_time)
 
-    plot(avg_running_times, ds, "number of dimensions", "inc_d_large", y_max=1000)
+    plot(avg_running_times, ds, "number of dimensions", "inc_d_large", y_max=1100)
 
 
 def run_diff_d_v2():
