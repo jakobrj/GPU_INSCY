@@ -16,7 +16,7 @@ def get_standard_params():
     F = 1.
     r = 1.
     cl = 15
-    min_size = 1/(4*cl)
+    min_size = 1/(8*cl)
     std = 5.
     dims_pr_cl = 3
     N_size = 0.01 #(((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200.
@@ -65,7 +65,7 @@ def run(experiment, method, n, d, c, N_size, F, r, num_obj, min_size, cl, std, d
 
 def plot(avg_running_times, xs, x_label, experiment, y_max=None):
     plt.rcParams.update({'font.size': font_size})
-    plt.plot(xs[:len(avg_running_times)], avg_running_times, color="orange", marker = "x")
+    plt.plot(xs[:len(avg_running_times)], avg_running_times, color="#004488", marker = "x")
     plt.gcf().subplots_adjust(left=0.14)
     plt.ylabel('time in seconds')
     plt.xlabel(x_label)
@@ -194,7 +194,7 @@ def run_diff_dims_pr_cl():
 def run_diff_n():
     _, d, c, _, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds = get_standard_params()
     ns =  [8000, 16000, 32000, 64000, 128000, 256000, 512000]
-    N_sizes = [(((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200. for n in ns]
+    N_sizes = [(((num_obj*60)*cl/n)**(1/dims_pr_cl))*(std**(1/2))/200. for n in ns]
 
 
     print("running experiment: inc_n_large")
@@ -298,7 +298,7 @@ def run_diff_distribution():
     plt.rcParams.update({'font.size': font_size})
 #     plt.figure(figsize=(4,6))
     x = np.arange(2)
-    plt.bar(x, height=avg_running_times, color="orange")
+    plt.bar(x, height=avg_running_times, color="#004488")
     plt.xticks(x, ['Gaussian','Uniform'])
 
     plt.gcf().subplots_adjust(left=0.14)

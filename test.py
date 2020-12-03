@@ -15,7 +15,7 @@ def load_iris():
 
 
 
-test = 1
+test = -4
 
 d = 15
 c = 4
@@ -23,18 +23,18 @@ num_obj = 2
 F = 1.
 r = 1.
 cl = 20
-min_size = 1/(4*cl)
+min_size = 1/(8*cl)
 std = 5.
 dims_pr_cl = 3
 
 ns =  [8*1000, 16*1000, 32*1000, 64*1000, 128*1000, 256*1000, 512*1000, 1024*1000]
-N_sizes = [(((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200. for n in ns]
+N_sizes = [(((num_obj*60)*cl/n)**(1/dims_pr_cl))*(std**(1/2))/200. for n in ns]
 print(N_sizes)
 n = ns[test]
 N_size = N_sizes[test]
 
-# X = load_synt_gauss(n=n, d=d, cl=cl, std=std, cl_d=dims_pr_cl, re=0)
-X = load_synt(n=n, d=d, cl=cl, cl_d=dims_pr_cl, re=0)
+X = load_synt_gauss(n=n, d=d, cl=cl, std=std, cl_d=dims_pr_cl, re=0)
+# X = load_synt(n=n, d=d, cl=cl, cl_d=dims_pr_cl, re=0)
 n = X.shape[0]
 
 
