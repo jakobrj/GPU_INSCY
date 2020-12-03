@@ -16,6 +16,15 @@
 
 #define BLOCK_SIZE 512
 
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true) {
+    if (code != cudaSuccess) {
+        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+        if (abort) exit(code);
+    }
+}
+
 using namespace std;
 
 vector<vector<vector<int>>> run_INSCY(at::Tensor X, float neighborhood_size, float F, int num_obj, int min_size, float r, int number_of_cells,
@@ -265,6 +274,7 @@ vector<vector<vector<int>>> run_GPU_INSCY_memory(at::Tensor X, float neighborhoo
 
     float *d_X = copy_to_device(X, n, d);
     cudaDeviceSynchronize();
+    gpuErrchk(cudaPeekAtLastError());
 
     SCY_tree *scy_tree = new SCY_tree(X, subspace, number_of_cells, d, n, neighborhood_size, mins, maxs);
 
