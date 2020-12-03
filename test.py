@@ -19,16 +19,16 @@ test = -4
 
 d = 15
 c = 4
-num_obj = 2
+num_obj = 1
 F = 1.
 r = 1.
 cl = 20
-min_size = 1/(8*cl)
+min_size = 1/(20*cl)
 std = 5.
 dims_pr_cl = 3
 
 ns =  [8*1000, 16*1000, 32*1000, 64*1000, 128*1000, 256*1000, 512*1000, 1024*1000]
-N_sizes = [(((num_obj*100)*cl/n)**(1/dims_pr_cl))*(std**(1/2))/200. for n in ns]
+N_sizes = [(((160)*cl/n)**(1/dims_pr_cl))*(std**(1/2))/200. for n in ns]
 print(N_sizes)
 n = ns[test]
 N_size = N_sizes[test]
