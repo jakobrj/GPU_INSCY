@@ -12,7 +12,7 @@ def get_standard_params():
     d = 15
     n = 25000
     c = 4
-    num_obj = 2
+    num_obj = 1
     F = 1.
     r = 1.
     cl = 15
@@ -194,7 +194,7 @@ def run_diff_dims_pr_cl():
 def run_diff_n():
     _, d, c, _, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds = get_standard_params()
     ns =  [8000, 16000, 32000, 64000, 128000, 256000, 512000]
-    N_sizes = [(((160)*cl/n)**(1/dims_pr_cl))*(std**(1/2))/200. for n in ns]
+    N_sizes = [(((150)*cl/n)**(1/dims_pr_cl))*(std**(1/2))/200. for n in ns]
 
 
     print("running experiment: inc_n_large")
