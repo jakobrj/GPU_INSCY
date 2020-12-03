@@ -8,7 +8,7 @@ from data.generator import *
 
 t0 = time.time()
 print("Compiling our c++/cuda code, this usually takes 1-2 min. ")
-inscy = load(name="GPU_INSCY",
+inscy = load(name="GPU_INSCY_1",
              sources=["inscy_map.cpp",
                       "src/utils/util.cu",
                       "src/utils/TmpMalloc.cu",
