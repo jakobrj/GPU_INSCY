@@ -5,6 +5,7 @@ import time
 import matplotlib.pyplot as plt
 
 font_size = 20
+dist_lim = 12.
 
 def get_standard_params():
 
@@ -102,7 +103,7 @@ def run_diff_number_of_cl():
         avg_running_time /= rounds
         avg_running_times.append(avg_running_time)
 
-    plot(avg_running_times, cls, "number of clusters", "inc_cl", y_max=10.)
+    plot(avg_running_times, cls, "number of clusters", "inc_cl", y_max=dist_lim)
 
 def run_diff_number_of_cl_std():
     n, d, c, N_size, F, r, num_obj, min_size, _, std, dims_pr_cl, rounds = get_standard_params()
@@ -131,7 +132,7 @@ def run_diff_number_of_cl_std():
         avg_running_time /= rounds
         avg_running_times.append(avg_running_time)
 
-    plot(avg_running_times, cls, "number of clusters", "inc_cl_std", y_max=10.)
+    plot(avg_running_times, cls, "number of clusters", "inc_cl_std", y_max=dist_lim)
 
 
 
@@ -158,7 +159,7 @@ def run_diff_std():
         avg_running_time /= rounds
         avg_running_times.append(avg_running_time)
 
-    plot(avg_running_times, stds, "standard deviation", "inc_std", y_max=10.)
+    plot(avg_running_times, stds, "standard deviation", "inc_std", y_max=dist_lim)
 
 
 
@@ -303,7 +304,7 @@ def run_diff_distribution():
     plt.gcf().subplots_adjust(left=0.14)
     plt.ylabel('time in seconds')
     plt.xlabel('method')
-    plt.ylim((0.,10.))
+    plt.ylim((0.,dist_lim))
     plt.tight_layout()
     plt.savefig("plots/diff_dist.pdf")
     #plt.show()
