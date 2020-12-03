@@ -64,6 +64,10 @@ def run(experiment, method, n, d, c, N_size, F, r, num_obj, min_size, cl, std, d
     return running_time, subspaces, clusterings
 
 def plot(avg_running_times, xs, x_label, experiment, y_max=None):
+
+    print(avg_running_times)
+    print(xs)
+
     plt.rcParams.update({'font.size': font_size})
     plt.plot(xs[:len(avg_running_times)], avg_running_times, color="#004488", marker = "x")
     plt.gcf().subplots_adjust(left=0.14)
@@ -216,7 +220,7 @@ def run_diff_n():
         avg_running_time /= rounds
         avg_running_times.append(avg_running_time)
 
-    plot(avg_running_times, ns, "number of points", "inc_n_large", y_max=500)
+    plot(avg_running_times, ns, "number of points", "inc_n_large", y_max=1000)
 
 def run_diff_d():
     n, _, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds = get_standard_params()
@@ -241,7 +245,7 @@ def run_diff_d():
         avg_running_time /= rounds
         avg_running_times.append(avg_running_time)
 
-    plot(avg_running_times, ds, "number of dimensions", "inc_d_large", y_max=500)
+    plot(avg_running_times, ds, "number of dimensions", "inc_d_large", y_max=1000)
 
 
 def run_diff_d_v2():
