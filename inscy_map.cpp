@@ -250,6 +250,12 @@ vector<vector<vector<int>>> run_GPU_INSCY_star(at::Tensor X, float neighborhood_
 vector<vector<vector<int>>> run_GPU_INSCY_memory(at::Tensor X, float neighborhood_size, float F, int num_obj, int min_size, float r,
                           int number_of_cells, bool rectangular) {
 
+
+    size_t free, total;
+    printf("\n");
+    cudaMemGetInfo(&free,&total);
+    printf("%d KB free of total %d KB\n",free/1024,total/1024);
+
     int n = X.size(0);
     int d = X.size(1);
 
@@ -329,11 +335,6 @@ vector<vector<vector<int>>> run_GPU_INSCY_memory(at::Tensor X, float neighborhoo
 
     return tuple;
 }
-
-size_t free, total;
-printf("\n");
-cudaMemGetInfo(&free,&total);
-printf("%d KB free of total %d KB\n",free/1024,total/1024);
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m
 ) {
