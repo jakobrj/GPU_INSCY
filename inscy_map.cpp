@@ -330,6 +330,10 @@ vector<vector<vector<int>>> run_GPU_INSCY_memory(at::Tensor X, float neighborhoo
     return tuple;
 }
 
+size_t free, total;
+printf("\n");
+cudaMemGetInfo(&free,&total);
+printf("%d KB free of total %d KB\n",free/1024,total/1024);
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m
 ) {
