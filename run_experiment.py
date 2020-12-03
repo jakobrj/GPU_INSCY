@@ -5,7 +5,7 @@ import time
 import matplotlib.pyplot as plt
 
 font_size = 20
-dist_lim = 12.
+dist_lim = 16.
 
 def get_standard_params():
 
