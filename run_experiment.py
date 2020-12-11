@@ -16,10 +16,10 @@ def get_standard_params():
     F = .1
     r = 1.
     cl = max(1, n//4000)
-    min_size = 500
-    std = .5
+    min_size = 400
+    std = .4
     dims_pr_cl = 3
-    N_size = 0.0005 #(((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200.
+    N_size = 0.0004 #(((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200.
     rounds = 3
 
     return n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds
