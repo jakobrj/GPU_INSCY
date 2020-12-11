@@ -126,7 +126,7 @@ def run_diff_number_of_cl_std():
         print("cl:", cl)
 
         #N_size = (((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200.
-        std = 32*5/cl
+        std = 32/cl
 
         avg_running_time = 0.
         for round in range(rounds):
@@ -142,7 +142,7 @@ def run_diff_number_of_cl_std():
 
 def run_diff_std():
     n, d, c, N_size, F, r, num_obj, min_size, cl, _, dims_pr_cl, rounds = get_standard_params()
-    stds = [0.25, 0.5, 1, 2, 4, 8]
+    stds = [0.125, 0.25, 0.5, 1, 2, 4, 8]
 
     print("running experiment: inc_std")
 
