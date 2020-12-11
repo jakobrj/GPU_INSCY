@@ -10,16 +10,16 @@ dist_lim = 16.
 def get_standard_params():
 
     d = 15
-    n = 25000
+    n = 24000
     c = 4
     num_obj = 1
-    F = 1.
+    F = .1
     r = 1.
-    cl = 15
-    min_size = 1/(20*cl)
-    std = 5.
+    cl = max(1, n//4000)
+    min_size = 500
+    std = .5
     dims_pr_cl = 3
-    N_size = 0.01 #(((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200.
+    N_size = 0.0005 #(((num_obj*10)*cl/n)**(1/dims_pr_cl))*std/200.
     rounds = 3
 
     return n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds
@@ -49,7 +49,7 @@ def run(experiment, method, n, d, c, N_size, F, r, num_obj, min_size, cl, std, d
         X = gen(n=n, d=d, cl=cl, std=std, re=round, cl_d=dims_pr_cl)
 
         t0 = time.time()
-        subspaces, clusterings = GPU_INSCY_memory(X, N_size, F, num_obj, int(n * min_size), r, number_of_cells=c, rectangular=True)
+        subspaces, clusterings = GPU_INSCY_memory(X, N_size, F, num_obj, min_size, r, number_of_cells=c, rectangular=True)
         t1 = time.time()
         running_time = t1-t0
 
@@ -142,7 +142,7 @@ def run_diff_number_of_cl_std():
 
 def run_diff_std():
     n, d, c, N_size, F, r, num_obj, min_size, cl, _, dims_pr_cl, rounds = get_standard_params()
-    stds = [1.*i for i in range(3,10+1)]
+    stds = [0.25, 0.5, 1, 2, 4, 8]
 
     print("running experiment: inc_std")
 
@@ -196,9 +196,8 @@ def run_diff_dims_pr_cl():
 
 
 def run_diff_n():
-    _, d, c, _, F, r, num_obj, min_size, cl, std, dims_pr_cl, rounds = get_standard_params()
-    ns =  [8000, 16000, 32000, 64000, 128000, 256000, 512000]
-    N_sizes = [(((150)*cl/n)**(1/dims_pr_cl))*(std**(1/2))/200. for n in ns]
+    _, d, c, N_size, F, r, num_obj, min_size, _, std, dims_pr_cl, rounds = get_standard_params()
+    ns =  [8000, 16000, 32000, 64000, 128000, 256000, 512000, 1024000]
 
 
     print("running experiment: inc_n_large")
@@ -210,8 +209,9 @@ def run_diff_n():
         os.makedirs('plots/')
 
     avg_running_times = []
-    for n , N_size in zip(ns, N_sizes):
-        print("n:", n)
+    for n  in ns:
+        cl = max(1, n//4000)
+        print("n:", n, "cl:", cl)
         avg_running_time = 0.
         for round in range(rounds):
             running_time, subspaces, clusterings = run("inc_n_large", "GPU_INSCY_memory", n, d, c, N_size, F, r, num_obj, min_size, cl, std, dims_pr_cl, round)
