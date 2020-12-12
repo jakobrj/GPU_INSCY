@@ -10,7 +10,7 @@ dist_lim = 16.
 def get_standard_params():
 
     d = 15
-    n = 24000
+    n = 64000
     c = 4
     num_obj = 1
     F = .1
