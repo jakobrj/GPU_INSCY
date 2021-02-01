@@ -18,7 +18,7 @@ Run a small example with INSCY, GPU-INSCY, GPU-INSCY*, and GPU-INSCY-memory, on 
 ```
 python run_example.py
 ```
-Running the script should take around 5 minutes and end out a plot of the average running times.
+Running the script should take around 5 minutes and result in a plot of the average running times.
 The pendigits dataset is not a part of the example since it would take around 8 hours for INSCY to process.
 
 ![plot](example.png)
